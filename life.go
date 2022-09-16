@@ -34,8 +34,8 @@ func create(number int, color color.RGBA) int {
 	for i := 0; i < number; i++ {
 		var particle = Particle{((rand.Float64() * 924) + 50), ((rand.Float64() * 628) + 50), 0, 0}
 		group = append(group, particle)
-		particles = append(particles, Group{color, group})
 	}
+	particles = append(particles, Group{color, group})
 	return len(particles) - 1
 }
 
@@ -105,6 +105,7 @@ func run() {
 		rule(yellow, yellow, 0.15)
 		rule(yellow, green, -0.20)
 
+		imd.Reset()
 		imd.Clear()
 		for i := 0; i < len(particles); i++ {
 			for j := 0; j < len(particles[i].group); j++ {

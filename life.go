@@ -56,9 +56,21 @@ type ParticleRules struct {
 	force           float64
 }
 
-var screenWidth float64 = 1024
-var screenHeight float64 = 768
+type ParticleCreation struct {
+	amount     int
+	color      color.RGBA
+	fuzionTemp int
+}
+
+var screenWidth float64 = 1600
+var screenHeight float64 = 900
 var tempature int = 0
+var particleSize = 2
+var red ParticleCreation = ParticleCreation{600, colornames.Red, 20}
+var yellow ParticleCreation = ParticleCreation{600, colornames.Yellow, 40}
+var green ParticleCreation = ParticleCreation{600, colornames.Green, 100}
+var startingParticles = []ParticleCreation{red, yellow, green}
+var isPauzed = false
 
 var fuzionRules = []ParticleRules{}
 var normalRules = []ParticleRules{}
@@ -67,7 +79,7 @@ var particles = []Group{}
 var fuzionGroupIndexes = []int{}
 
 var backgroundcolor color.RGBA = color.RGBA{0, 0, 0, 0}
-var speedIndex float64 = 0.3
+var speedIndex float64 = 0.5
 
 func calculateSpeedIndex() {
 	if tempature < 0 {
@@ -84,7 +96,7 @@ func createRandom(number int, color color.RGBA, fuzetemp int) int {
 	var group = []Particle{}
 
 	for i := 0; i < number; i++ {
-		var particle = Particle{((rand.Float64() * 924) + 50), ((rand.Float64() * 628) + 50), 0, 0}
+		var particle = Particle{(rand.Float64() * screenWidth), (rand.Float64() * screenHeight), 0, 0}
 		group = append(group, particle)
 	}
 	particles = append(particles, Group{color, group, fuzetemp})
@@ -152,7 +164,7 @@ func increaseTemp() {
 	if tempature > 160 {
 		backgroundcolor.R += 5
 	}
-	backgroundcolor.B -= 1
+	// backgroundcolor.B -= 1
 	calculateSpeedIndex()
 }
 func decreaseTemp() {
@@ -166,6 +178,36 @@ func decreaseTemp() {
 		}
 	}
 
+}
+
+func reset() {
+	fuzionRules = []ParticleRules{}
+	normalRules = []ParticleRules{}
+	particles = []Group{}
+	fuzionGroupIndexes = []int{}
+	tempature = 0
+	speedIndex = 0.5
+	backgroundcolor.R = 0
+	backgroundcolor.G = 0
+	backgroundcolor.B = 0
+	backgroundcolor.A = 0
+	for i := 0; i < len(startingParticles); i++ {
+		createRandom(startingParticles[i].amount, startingParticles[i].color, startingParticles[i].fuzionTemp)
+	}
+	for i := 0; i < len(particles); i++ {
+		for j := 0; j < len(particles); j++ {
+			normalRules = append(normalRules, ParticleRules{i, j, (float64(RandInt(-12, 12)) * 0.03)})
+		}
+	}
+
+}
+
+func pauze() {
+	isPauzed = true
+}
+
+func start() {
+	isPauzed = false
 }
 
 func rule(groupIndex1 int, groupIndex2 int, g float64) {
@@ -188,15 +230,11 @@ func rule(groupIndex1 int, groupIndex2 int, g float64) {
 			d := math.Sqrt(dx*dx + dy*dy)
 			if d > 0 && d < 3 && tempature >= Ta && tempature >= Tb && particles[groupIndex1].color != particles[groupIndex2].color {
 				particles[groupIndex2].group = RemoveIndex(particles[groupIndex2].group, j)
-				c1 := particles[groupIndex1].color
-				c2 := particles[groupIndex2].color
-				color1 := colorful.Color{float64(c1.R) / 255, float64(c1.G) / 255, float64(c1.B) / 255}
-				color2 := colorful.Color{float64(c2.R) / 255, float64(c2.G) / 255, float64(c2.B) / 255}
-				mix := color1.BlendHcl(color2, 0.5).Clamped()
-				fuzeColor.R = uint8(mix.R * 255)
-				fuzeColor.G = uint8(mix.G * 255)
-				fuzeColor.B = uint8(mix.B * 255)
-				fuzeColor.A = particles[groupIndex1].color.A + particles[groupIndex2].color.A
+				r, g, b, a := colorful.FastHappyColor().Clamped().RGBA()
+				fuzeColor.R = uint8(r)
+				fuzeColor.G = uint8(g)
+				fuzeColor.B = uint8(b)
+				fuzeColor.A = uint8(a)
 				fuze = true
 			}
 			if d > 0 && d < 80 {
@@ -210,10 +248,10 @@ func rule(groupIndex1 int, groupIndex2 int, g float64) {
 			particles[groupIndex1].group[i].vy = (particles[groupIndex1].group[i].vy + fy) * speedIndex
 			particles[groupIndex1].group[i].x += particles[groupIndex1].group[i].vx
 			particles[groupIndex1].group[i].y += particles[groupIndex1].group[i].vy
-			if particles[groupIndex1].group[i].x <= 0 || particles[groupIndex1].group[i].x >= screenWidth {
+			if particles[groupIndex1].group[i].x < 2 || particles[groupIndex1].group[i].x > screenWidth-2*float64(particleSize) {
 				particles[groupIndex1].group[i].vx *= -1
 			}
-			if particles[groupIndex1].group[i].y <= 0 || particles[groupIndex1].group[i].y >= screenHeight {
+			if particles[groupIndex1].group[i].y < 2 || particles[groupIndex1].group[i].y > screenHeight-2*float64(particleSize) {
 				particles[groupIndex1].group[i].vy *= -1
 			}
 		}
@@ -234,7 +272,7 @@ func rule(groupIndex1 int, groupIndex2 int, g float64) {
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Artificial Life",
-		Bounds: pixel.R(0, 0, 1024, 768),
+		Bounds: pixel.R(0, 0, screenWidth, screenHeight),
 		VSync:  true,
 	}
 	win, err := pixelgl.NewWindow(cfg)
@@ -242,14 +280,16 @@ func run() {
 		panic(err)
 	}
 
-	buttons := []Button{}
+	//text creation
 
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	tempatureText := text.New(pixel.V(50, screenHeight-50), basicAtlas)
-	FuzionCountText := text.New(pixel.V(50, screenHeight-70), basicAtlas)
+	tempatureText := text.New(pixel.V(50, screenHeight-90), basicAtlas)
+	FuzionCountText := text.New(pixel.V(50, screenHeight-120), basicAtlas)
 
 	spritesheet, err := loadPicture("./sprites/menuButtons.png")
 
+	//button creation
+	buttons := []Button{}
 	var buttonFrames []pixel.Rect
 	for x := spritesheet.Bounds().Min.X; x < spritesheet.Bounds().Max.X; x += 18 {
 		for y := spritesheet.Bounds().Min.Y; y < spritesheet.Bounds().Max.Y; y += 16 {
@@ -257,21 +297,28 @@ func run() {
 		}
 	}
 
-	tempForwardButton := Button{"tempForwardButton", pixel.NewSprite(spritesheet, buttonFrames[0]), 215, (screenHeight - 47), 1, 1, 0, increaseTemp}
-	tempBackButton := Button{"tempBackButton", pixel.NewSprite(spritesheet, buttonFrames[4]), 145, (screenHeight - 47), 1, 1, 0, decreaseTemp}
+	tempForwardButton := Button{"tempForwardButton", pixel.NewSprite(spritesheet, buttonFrames[0]), 220, (screenHeight - 87), 1, 1, 0, increaseTemp}
+	tempBackButton := Button{"tempBackButton", pixel.NewSprite(spritesheet, buttonFrames[4]), 140, (screenHeight - 87), 1, 1, 0, decreaseTemp}
+	resetButton := Button{"tempBackButton", pixel.NewSprite(spritesheet, buttonFrames[90]), 135, (screenHeight - 47), 1, 1, 0, reset}
+	pauzeButton := Button{"tempBackButton", pixel.NewSprite(spritesheet, buttonFrames[34]), 95, (screenHeight - 47), 1, 1, 0, pauze}
+	startButton := Button{"tempBackButton", pixel.NewSprite(spritesheet, buttonFrames[12]), 55, (screenHeight - 47), 1, 1, 0, start}
 	buttons = append(buttons, tempBackButton)
 	buttons = append(buttons, tempForwardButton)
+	buttons = append(buttons, resetButton)
+	buttons = append(buttons, pauzeButton)
+	buttons = append(buttons, startButton)
 
-	createRandom(200, colornames.Red, 20)
-	createRandom(200, colornames.Yellow, 40)
-	createRandom(200, colornames.Green, 100)
+	//generating starting particles
+	for i := 0; i < len(startingParticles); i++ {
+		createRandom(startingParticles[i].amount, startingParticles[i].color, startingParticles[i].fuzionTemp)
+	}
 
+	//aplying rules
 	for i := 0; i < len(particles); i++ {
 		for j := 0; j < len(particles); j++ {
-			normalRules = append(normalRules, ParticleRules{i, j, (float64(RandInt(-12, 12)) * 0.03)})
+			normalRules = append(normalRules, ParticleRules{i, j, (float64(RandInt(-20, 20)) * 0.03)})
 		}
 	}
-	// blue := createRandom(10, colornames.Blue, 1)
 
 	imd := imdraw.New(nil)
 	for !win.Closed() {
@@ -301,46 +348,35 @@ func run() {
 		}
 
 		win.Update()
-
 		tempatureText.Clear()
 		FuzionCountText.Clear()
 		fmt.Fprintf(tempatureText, "Tempature       %s 'C", strconv.Itoa(tempature))
 		fmt.Fprintf(FuzionCountText, "New fuzions: %s", strconv.Itoa(len(fuzionGroupIndexes)))
 
-		// rule(green, green, -0.14)
-		// rule(green, red, -0.17)
-		// rule(green, yellow, 0.1)
-		// rule(red, red, 0.1)
-		// rule(yellow, red, -0.05)
-		// rule(red, green, 0.1)
-		// rule(yellow, yellow, 0.15)
-		// rule(yellow, green, -0.16)
-		// rule(blue, white, -0.16)
-		// rule(yellow, blue, -0.17)
-		// rule(blue, red, 0.11)
+		if !isPauzed {
+			for i := 0; i < len(fuzionRules); i++ {
 
-		for i := 0; i < len(fuzionRules); i++ {
-
-			rule(fuzionRules[i].fuzionParticle1, fuzionRules[i].fuzionParticle2, fuzionRules[i].force)
-		}
-		for i := 0; i < len(normalRules); i++ {
-			rule(normalRules[i].fuzionParticle1, normalRules[i].fuzionParticle2, normalRules[i].force)
-		}
-
-		//Cleaning screen between frames
-		imd.Reset()
-		imd.Clear()
-
-		//Change positions of particles for drawing
-		for i := 0; i < len(particles); i++ {
-			for j := 0; j < len(particles[i].group); j++ {
-				imd.Color = particles[i].color
-				imd.EndShape = imdraw.SharpEndShape
-				imd.Push(pixel.V(particles[i].group[j].x-2, particles[i].group[j].y-2), pixel.V(particles[i].group[j].x+2, particles[i].group[j].y+2))
-				imd.Rectangle(0)
+				rule(fuzionRules[i].fuzionParticle1, fuzionRules[i].fuzionParticle2, fuzionRules[i].force)
 			}
-		}
+			for i := 0; i < len(normalRules); i++ {
+				rule(normalRules[i].fuzionParticle1, normalRules[i].fuzionParticle2, normalRules[i].force)
+			}
 
+			//Cleaning screen between frames
+			imd.Reset()
+			imd.Clear()
+
+			//Change positions of particles for drawing
+			for i := 0; i < len(particles); i++ {
+				for j := 0; j < len(particles[i].group); j++ {
+					imd.Color = particles[i].color
+					imd.EndShape = imdraw.SharpEndShape
+					imd.Push(pixel.V(particles[i].group[j].x-float64(particleSize), particles[i].group[j].y-float64(particleSize)), pixel.V(particles[i].group[j].x+float64(particleSize), particles[i].group[j].y+float64(particleSize)))
+					imd.Rectangle(0)
+				}
+			}
+
+		}
 	}
 
 }

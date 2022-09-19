@@ -65,10 +65,10 @@ type ParticleCreation struct {
 var screenWidth float64 = 1600
 var screenHeight float64 = 900
 var tempature int = 0
-var particleSize = 2
-var red ParticleCreation = ParticleCreation{600, colornames.Red, 20}
-var yellow ParticleCreation = ParticleCreation{600, colornames.Yellow, 40}
-var green ParticleCreation = ParticleCreation{600, colornames.Green, 100}
+var particleSize = 3
+var red ParticleCreation = ParticleCreation{200, colornames.Red, 20}
+var yellow ParticleCreation = ParticleCreation{200, colornames.Yellow, 40}
+var green ParticleCreation = ParticleCreation{200, colornames.Green, 100}
 var startingParticles = []ParticleCreation{red, yellow, green}
 var isPauzed = false
 
@@ -119,7 +119,9 @@ func createFuzionGroup(number int, color color.RGBA, fuzetemp int, x float64, y 
 func createFuzionRules() {
 	for i := 0; i < len(fuzionGroupIndexes); i++ {
 		for j := 0; j < len(particles); j++ {
-			fuzionRules = append(fuzionRules, ParticleRules{fuzionGroupIndexes[i], j, (float64(RandInt(-10, 10)) * 0.03)})
+			if RandInt(1, 3) > 1 {
+				fuzionRules = append(fuzionRules, ParticleRules{i, j, (float64(RandInt(-12, 12)) * 0.03)})
+			}
 		}
 	}
 }
@@ -196,7 +198,9 @@ func reset() {
 	}
 	for i := 0; i < len(particles); i++ {
 		for j := 0; j < len(particles); j++ {
-			normalRules = append(normalRules, ParticleRules{i, j, (float64(RandInt(-12, 12)) * 0.03)})
+			if RandInt(1, 3) > 1 {
+				normalRules = append(normalRules, ParticleRules{i, j, (float64(RandInt(-12, 12)) * 0.03)})
+			}
 		}
 	}
 
@@ -237,7 +241,7 @@ func rule(groupIndex1 int, groupIndex2 int, g float64) {
 				fuzeColor.A = uint8(a)
 				fuze = true
 			}
-			if d > 0 && d < 80 {
+			if d > 0 && d < 60 {
 				F := g * 1 / d
 				fx += (F * dx)
 				fy += (F * dy)

@@ -65,7 +65,7 @@ type ParticleCreation struct {
 var screenWidth float64 = 1600
 var screenHeight float64 = 900
 var tempature int = 0
-var particleSize = 3
+var particleSize = 2
 var red ParticleCreation = ParticleCreation{200, colornames.Red, 20}
 var yellow ParticleCreation = ParticleCreation{200, colornames.Yellow, 40}
 var green ParticleCreation = ParticleCreation{200, colornames.Green, 100}

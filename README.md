@@ -1,6 +1,6 @@
 # Particle Life Simulation Go version
 
-This is a go vesion of the Particle Life Simulation made by hunar4321.
+This is a go vesion of the Particle Life Simulation made by hunar4321. The particles in this simulation can also fuze under the right circomstances to create a new fuzion particle.
 
 ## Original creation
 [Particle Life Simulation by hunar4321](https://github.com/hunar4321/particle-life)
@@ -12,7 +12,7 @@ A simple program to simulate primitive Artificial Life using simple rules of att
 ![Screenshot](./img/creation.jpg)
 
 ## installation
-Pull repo into go workspace, build and run!
+Clone repo and run exe or clone repo into workspace build and run!
 
 ### requirments
 [Pixel by faiface](https://github.com/faiface/pixel)
